@@ -1,24 +1,22 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import logo from '../assets/logo.png';
 import CountUp from 'react-countup';
 import { useInView } from 'react-intersection-observer';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import 'swiper/css';
-import 'swiper/css/autoplay';
 import { Autoplay } from 'swiper/modules';
-import { FaUserCheck, FaClipboardList, FaSmile, FaPen, FaTools, FaStar } from 'react-icons/fa';
-import { Link } from 'react-router-dom';
-
-const jobList = [
-  { title: "Carpenter", location: "Bharatpur" },
-  { title: "Plumber", location: "Pokhara" },
-  { title: "Electrician", location: "Lalitpur" },
-  { title: "Sweeper", location: "Kathmandu" },
-  { title: "Painter", location: "Butwal" },
-  { title: "Gardener", location: "Biratnagar" },
-  { title: "Welder", location: "Nepalgunj" },
-  { title: "Mason", location: "Hetauda" },
-];
+import {
+  FaUserCheck,
+  FaClipboardList,
+  FaSmile,
+  FaPen,
+  FaTools,
+  FaStar,
+  FaMapMarkerAlt,
+  FaCalendarAlt,
+} from 'react-icons/fa';
+import { Link, useNavigate } from 'react-router-dom'; // ✅ Added useNavigate
+import axios from '../utils/axiosInstance';
 
 const testimonials = [
   {
@@ -63,6 +61,26 @@ const stats = [
 
 const Home = () => {
   const [ref, inView] = useInView({ triggerOnce: true, threshold: 0.5 });
+  const [featuredGigs, setFeaturedGigs] = useState([]);
+  const navigate = useNavigate(); // ✅ Init navigate
+
+  useEffect(() => {
+    const fetchFeaturedGigs = async () => {
+      try {
+        const response = await axios.get('/api/tasks/featured');
+        const filteredGigs = response.data.filter((job) => !job.isCancelled);
+        setFeaturedGigs(filteredGigs);
+      } catch (error) {
+        console.error('Error fetching featured gigs:', error);
+      }
+    };
+    fetchFeaturedGigs();
+  }, []);
+
+  // ✅ Navigation handler
+  const handleJobClick = (jobId) => {
+    navigate('/jobs', { state: { selectedJobId: jobId } });
+  };
 
   return (
     <>
@@ -72,14 +90,12 @@ const Home = () => {
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold leading-snug md:leading-tight">
             Your One-Stop Platform for Short-Term Gigs & Reliable Taskers!
           </h1>
-          <p className="text-green-500 font-semibold mt-4 text-lg sm:text-xl">
-            KARMA YOGI
-          </p>
+          <p className="text-green-500 font-semibold mt-4 text-lg sm:text-xl">KARMA YOGI</p>
           <Link to="/jobs">
-      <button className="mt-6 bg-green-600 text-white px-6 sm:px-8 py-2 sm:py-3 rounded-md font-bold hover:bg-green-700 transition">
-        Browse Jobs
-      </button>
-    </Link>
+            <button className="mt-6 bg-green-600 text-white px-6 sm:px-8 py-2 sm:py-3 rounded-md font-bold hover:bg-green-700 transition">
+              Browse Jobs
+            </button>
+          </Link>
         </div>
       </section>
 
@@ -87,30 +103,53 @@ const Home = () => {
       <section className="bg-black py-12 px-4 sm:px-6 text-white">
         <h2 className="text-2xl font-bold mb-8 text-green-600 text-center">Featured Gigs</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {jobList.map((job, index) => (
-            <div
-              key={index}
-              className="bg-white shadow-md rounded-md p-4 w-full mx-auto max-w-sm"
-            >
-              <div className="mb-2 flex justify-center">
-                <img src={logo} alt="Logo" className="w-16 h-auto object-contain" />
+          {featuredGigs.length > 0 ? (
+            featuredGigs.map((job) => (
+              <div
+                key={job._id}
+                className="bg-white shadow-md rounded-md p-4 w-full mx-auto max-w-sm cursor-pointer"
+                onClick={() => handleJobClick(job._id)} // ✅ Click card to navigate
+              >
+                <div className="mb-2 flex justify-center">
+                  <img src={logo} alt="Logo" className="w-16 h-auto object-contain" />
+                </div>
+
+                <h3 className="text-lg font-bold text-black mb-2 text-center">{job.title}</h3>
+
+                <div className="flex justify-center gap-4 text-gray-600 text-sm mt-2">
+                  <div className="flex items-center gap-1">
+                    <FaMapMarkerAlt className="text-green-600" />
+                    <span>{job.location}</span>
+                  </div>
+                  {job.dueDate && (
+                    <div className="flex items-center gap-1">
+                      <FaCalendarAlt className="text-blue-500" />
+                      <span>{new Date(job.dueDate).toLocaleDateString('en-CA')}</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="text-center text-sm text-gray-700 mt-2">
+                  Rs.{job.budget}/Hrs
+                </div>
+
+                {/* ✅ Apply button also navigates */}
+                <div className="mt-4 text-center">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation(); // Prevent card click propagation
+                      handleJobClick(job._id);
+                    }}
+                    className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
+                  >
+                    Apply Now
+                  </button>
+                </div>
               </div>
-              <h3 className="text-lg font-bold text-green-700 mb-1 text-center">{job.title}</h3>
-              <div className="flex gap-2 mt-1 text-xs justify-center flex-wrap">
-                <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full">{job.location}</span>
-                <span className="bg-pink-100 text-pink-800 px-2 py-1 rounded-full">Part-time</span>
-              </div>
-              <p className="text-sm text-gray-600 mt-2 text-center">
-                Lorem ipsum dolor sit amet consectetur. Eleifend metus vitae eu a sociis.
-              </p>
-              <div className="text-sm text-gray-500 mt-2 text-center">2082-01-08 · Rs.100/Hrs</div>
-              <div className="flex mt-4 justify-end">
-                <button className="bg-green-600 text-white px-4 py-1 rounded hover:bg-green-700 transition text-sm">
-                  Apply now
-                </button>
-              </div>
-            </div>
-          ))}
+            ))
+          ) : (
+            <p className="text-center text-white col-span-full">No featured gigs available</p>
+          )}
         </div>
       </section>
 
@@ -155,19 +194,13 @@ const Home = () => {
             spaceBetween={30}
             slidesPerView={3}
             autoplay={{
-              delay: 1,
+              delay: 3000,
               disableOnInteraction: false,
-              pauseOnMouseEnter: false,
+              pauseOnMouseEnter: true,
             }}
-            speed={4000}
+            speed={1000}
             loop={true}
             allowTouchMove={false}
-            loopedSlides={testimonials.length}
-            onSwiper={(swiper) => {
-              const section = document.querySelector('.group');
-              section.addEventListener('mouseenter', () => swiper.autoplay.stop());
-              section.addEventListener('mouseleave', () => swiper.autoplay.start());
-            }}
             breakpoints={{
               0: { slidesPerView: 1 },
               640: { slidesPerView: 1 },

@@ -229,12 +229,17 @@ const PostJob = () => {
                   <label className="block text-gray-600 mb-2">
                     Select a {dateOption.toLowerCase()}
                   </label>
-                  <input
-                    type="date"
-                    className="border border-gray-300 rounded p-3 w-full max-w-sm"
-                    value={selectedDate}
-                    onChange={(e) => setSelectedDate(e.target.value)}
-                  />
+
+               
+ <input
+  type="date"
+  min={new Date().toISOString().split('T')[0]} // disables selecting past dates
+  className="border border-gray-300 rounded p-3 w-full max-w-sm"
+  value={selectedDate}
+  onChange={(e) => setSelectedDate(e.target.value)}
+/>
+
+                  
                 </div>
               )}
 

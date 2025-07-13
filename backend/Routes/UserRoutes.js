@@ -1,17 +1,49 @@
 const express = require('express');
 const router = express.Router();
 
-const { registerUser, loginUser, getProfile } = require('../controllers/UserController');
+const {
+  registerUser,
+  loginUser,
+  getProfile,
+  updateProfile,
+  requestEmailChange,
+  confirmEmailChange,
+  changePassword
+} = require('../controllers/UserController');
+
+const {
+  verifyOTP,
+  resendOTP
+} = require('../controllers/EmailVerificationController');
+
 const auth = require('../middleware/auth');
-const upload = require('../middleware/uploads'); // updated multer middleware
+const upload = require('../middleware/uploads'); // multer for avatar upload
 
 // Register user with avatar upload
 router.post('/register', upload.single('avatar'), registerUser);
 
-// Login
+// Login user
 router.post('/login', loginUser);
 
-// Protected route to get user profile
+// Verify email OTP
+router.post('/verify-otp', verifyOTP);
+
+// Resend OTP email
+router.post('/resend-otp', resendOTP);
+
+// Protected routes - require auth
 router.get('/profile', auth, getProfile);
+
+// Update profile (name, location, avatar)
+router.put('/profile', auth, upload.single('avatar'), updateProfile);
+
+// Request email change (send OTP to new email)
+router.put('/email', auth, requestEmailChange);
+
+// Confirm email change with OTP
+router.post('/email/confirm', auth, confirmEmailChange);
+
+// Change password
+router.put('/password', auth, changePassword);
 
 module.exports = router;

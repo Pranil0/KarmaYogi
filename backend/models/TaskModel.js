@@ -11,6 +11,7 @@ const TaskSchema = new mongoose.Schema({
   dueDate: { type: Date },
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   assignedTo: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  isCancelled: { type: Boolean, default: false }, 
   status: { type: String, default: 'open' },
 }, { timestamps: true });
 

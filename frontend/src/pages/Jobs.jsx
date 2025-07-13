@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
+import { useLocation } from 'react-router-dom';
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
 import markerShadow from 'leaflet/dist/images/marker-shadow.png';
@@ -16,7 +17,6 @@ import {
 
 import axiosInstance from '../utils/axiosInstance';
 
-// Fix Leaflet icon issue
 const icon = new L.Icon({
   iconUrl: markerIcon,
   iconRetinaUrl: markerIcon2x,
@@ -27,31 +27,42 @@ const icon = new L.Icon({
   shadowSize: [41, 41],
 });
 
-const offerSteps = [
-  { id: 'profilePic', label: 'Upload a profile picture', type: 'file' },
-  { id: 'dob', label: 'Enter your date of birth', type: 'date' },
-  { id: 'phone', label: 'Verify your phone number', type: 'tel' },
-  { id: 'bank', label: 'Connect your bank account', type: 'text' },
-  { id: 'address', label: 'Add your billing address', type: 'text' },
-];
-
 const Jobs = () => {
+  const location = useLocation();
+  const selectedJobId = location.state?.selectedJobId || null;
+
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedJob, setSelectedJob] = useState(null);
   const [showOfferModal, setShowOfferModal] = useState(false);
   const [expandedFields, setExpandedFields] = useState({});
 
+  // Offer form states
+  const [offerAmount, setOfferAmount] = useState('');
+  const [offerMessage, setOfferMessage] = useState('');
+  const [offerLoading, setOfferLoading] = useState(false);
+
   useEffect(() => {
     const fetchJobs = async () => {
       try {
         const res = await axiosInstance.get('/api/tasks');
-        const mappedJobs = res.data.map((job) => ({
+         console.log('Fetched jobs:', res.data); // 👈 helpful debug
+
+        const filteredJobs = res.data.filter((job) => !job.isCancelled);
+        const mappedJobs = filteredJobs.map((job) => ({
           ...job,
           lat: job.latitude,
           lng: job.longitude,
         }));
+
         setJobs(mappedJobs);
+
+        if (selectedJobId) {
+          const jobToSelect = mappedJobs.find((job) => job._id === selectedJobId);
+          if (jobToSelect) {
+            setSelectedJob(jobToSelect);
+          }
+        }
       } catch (err) {
         console.error('Error fetching jobs:', err.response?.data || err.message);
       } finally {
@@ -60,10 +71,40 @@ const Jobs = () => {
     };
 
     fetchJobs();
-  }, []);
+  }, [selectedJobId]);
 
   const toggleField = (id) => {
     setExpandedFields((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const handleOfferSubmit = async () => {
+    if (!offerAmount || Number(offerAmount) <= 0) {
+      alert('Please enter a valid offer amount.');
+      return;
+    }
+    if (!selectedJob) {
+      alert('No job selected.');
+      return;
+    }
+
+    setOfferLoading(true);
+    try {
+      await axiosInstance.post('/api/offers', {
+        task: selectedJob._id,
+        offerAmount: Number(offerAmount),
+        message: offerMessage,
+      });
+
+      alert('Offer submitted successfully!');
+      setShowOfferModal(false);
+      setOfferAmount('');
+      setOfferMessage('');
+    } catch (error) {
+      console.error('Error submitting offer:', error.response?.data || error.message);
+      alert('Failed to submit offer. Please try again.');
+    } finally {
+      setOfferLoading(false);
+    }
   };
 
   if (loading) {
@@ -131,8 +172,8 @@ const Jobs = () => {
               <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded">
                 {job.location}
               </span>
-              <span className="px-2 py-1 bg-red-100 text-red-800 rounded">
-                {job.category}
+              <span className="bg-pink-100 text-pink-800 px-2 py-1 rounded-full">
+                {job.category || 'No category'}
               </span>
             </div>
             {job.description && (
@@ -264,6 +305,48 @@ const Jobs = () => {
                 </button>
               </div>
             </div>
+
+            {/* Offer Modal */}
+            {showOfferModal && (
+              <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
+                <div className="bg-white text-black p-6 rounded-lg max-w-md w-full">
+                  <h2 className="text-xl font-bold mb-4">Make an Offer</h2>
+                  <label className="block mb-2 font-semibold">Offer Amount (Rs.)</label>
+                  <input
+                    type="number"
+                    value={offerAmount}
+                    onChange={(e) => setOfferAmount(e.target.value)}
+                    className="w-full border border-gray-300 rounded p-2 mb-4"
+                    placeholder="Enter offer amount"
+                    min={1}
+                  />
+                  <label className="block mb-2 font-semibold">Offer Description (optional)</label>
+                  <textarea
+                    value={offerMessage}
+                    onChange={(e) => setOfferMessage(e.target.value)}
+                    className="w-full border border-gray-300 rounded p-2 mb-4"
+                    placeholder="Write your offer message"
+                    rows={4}
+                  />
+                  <div className="flex justify-end gap-4">
+                    <button
+                      className="bg-gray-400 text-white px-4 py-2 rounded"
+                      onClick={() => setShowOfferModal(false)}
+                      disabled={offerLoading}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+                      onClick={handleOfferSubmit}
+                      disabled={offerLoading}
+                    >
+                      {offerLoading ? 'Submitting...' : 'Submit Offer'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

@@ -69,41 +69,47 @@ const AuthForm = () => {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!validateForm()) return;
+  e.preventDefault();
+  if (!validateForm()) return;
 
-    setLoading(true);
-    try {
-      if (isLogin) {
-        const res = await axios.post("/api/users/login", {
-          email: formData.email,
-          password: formData.password,
-        });
-        login(res.data.token, res.data.user);
-        toast.success("Logged in successfully!");
-        navigate("/Home");
-      } else {
-        const data = new FormData();
-        data.append("name", formData.fullName);
-        data.append("location", formData.location);
-        data.append("email", formData.email);
-        data.append("password", formData.password);
-        data.append("avatar", formData.photo);
+  setLoading(true);
+  try {
+    if (isLogin) {
+      const res = await axios.post("/api/users/login", {
+        email: formData.email,
+        password: formData.password,
+      });
+      login(res.data.token, res.data.user);
+      toast.success("Logged in successfully!");
+      navigate("/Home");
+    } else {
+      // signup flow (unchanged)
+      const data = new FormData();
+      data.append("name", formData.fullName);
+      data.append("location", formData.location);
+      data.append("email", formData.email);
+      data.append("password", formData.password);
+      data.append("avatar", formData.photo);
 
-        await axios.post("/api/users/register", data, {
-          headers: { "Content-Type": "multipart/form-data" },
-        });
+      await axios.post("/api/users/register", data, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
 
-        toast.success("Account created successfully! Please log in.");
-        setIsLogin(true);
-        resetForm();
-      }
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Something went wrong");
-    } finally {
-      setLoading(false);
+      toast.success("OTP sent! Please verify your email.");
+      navigate(`/verify-otp?email=${formData.email}`);
     }
-  };
+  } catch (err) {
+    const message = err.response?.data?.message || "Something went wrong";
+    toast.error(message);
+
+    if (message === "Please verify your email first") {
+      navigate(`/verify-otp?email=${formData.email}`);
+    }
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   const handleFileChange = (e) => {
     setFormData((prev) => ({ ...prev, photo: e.target.files[0] }));
@@ -115,7 +121,7 @@ const AuthForm = () => {
   };
 
   return (
-     <div
+    <div
       className={`flex items-center justify-center min-h-screen ${
         isDarkMode ? "bg-[#0E1412]" : "bg-white"
       } px-4`}
@@ -158,7 +164,7 @@ const AuthForm = () => {
                       <input
                         type="text"
                         placeholder="Full Name"
-                        className="w-full p-2 pl-10 rounded bg-[#118b5e] text-white placeholder-gray-300 border-2 border-transparent focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50"
+                        className="w-full p-2 pl-10 rounded bg-[#118b5e] text-white placeholder-gray-300"
                         value={formData.fullName}
                         onChange={(e) =>
                           setFormData({ ...formData, fullName: e.target.value })
@@ -174,7 +180,7 @@ const AuthForm = () => {
                       <input
                         type="text"
                         placeholder="Location"
-                        className="w-full p-2 pl-10 rounded bg-[#118b5e] text-white placeholder-gray-300 border-2 border-transparent focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50"
+                        className="w-full p-2 pl-10 rounded bg-[#118b5e] text-white placeholder-gray-300"
                         value={formData.location}
                         onChange={(e) =>
                           setFormData({ ...formData, location: e.target.value })
@@ -190,7 +196,7 @@ const AuthForm = () => {
                       <input
                         type="email"
                         placeholder="Email"
-                        className="w-full p-2 pl-10 rounded bg-[#118b5e] text-white placeholder-gray-300 border-2 border-transparent focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50"
+                        className="w-full p-2 pl-10 rounded bg-[#118b5e] text-white placeholder-gray-300"
                         value={formData.email}
                         onChange={(e) =>
                           setFormData({ ...formData, email: e.target.value })
@@ -206,7 +212,7 @@ const AuthForm = () => {
                       <input
                         type="password"
                         placeholder="Password"
-                        className="w-full p-2 pl-10 rounded bg-[#118b5e] text-white placeholder-gray-300 border-2 border-transparent focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50"
+                        className="w-full p-2 pl-10 rounded bg-[#118b5e] text-white placeholder-gray-300"
                         value={formData.password}
                         onChange={(e) =>
                           setFormData({ ...formData, password: e.target.value })
@@ -223,7 +229,7 @@ const AuthForm = () => {
                         type="file"
                         accept="image/*"
                         className="w-full p-2 bg-[#118b5e] text-white rounded"
-                        onChange={(e) => handleFileChange(e, "photo")}
+                        onChange={handleFileChange}
                       />
                       {errors.photo && (
                         <p className="text-white text-xs">{errors.photo}</p>
@@ -290,7 +296,7 @@ const AuthForm = () => {
                       <input
                         type="email"
                         placeholder="Email"
-                        className="w-full p-2 pl-10 rounded bg-[#118b5e] text-white placeholder-gray-300 border-2 border-transparent focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50"
+                        className="w-full p-2 pl-10 rounded bg-[#118b5e] text-white placeholder-gray-300"
                         value={formData.email}
                         onChange={(e) =>
                           setFormData({ ...formData, email: e.target.value })
@@ -306,7 +312,7 @@ const AuthForm = () => {
                       <input
                         type="password"
                         placeholder="Password"
-                        className="w-full p-2 pl-10 rounded bg-[#118b5e] text-white placeholder-gray-300 border-2 border-transparent focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50"
+                        className="w-full p-2 pl-10 rounded bg-[#118b5e] text-white placeholder-gray-300"
                         value={formData.password}
                         onChange={(e) =>
                           setFormData({ ...formData, password: e.target.value })
