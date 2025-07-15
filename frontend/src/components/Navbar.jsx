@@ -24,27 +24,26 @@ const Navbar = () => {
   const { isLoggedIn, user, logout } = useContext(AuthContext);
 
   useEffect(() => {
-    function handleClickOutside(event) {
+    const handleClickOutside = (e) => {
       if (
         dropdownRef.current &&
-        !dropdownRef.current.contains(event.target) &&
+        !dropdownRef.current.contains(e.target) &&
         avatarRef.current &&
-        !avatarRef.current.contains(event.target)
+        !avatarRef.current.contains(e.target)
       ) {
         setIsDropdownOpen(false);
         setShowSettingsDropdown(false);
       }
-      if (notifRef.current && !notifRef.current.contains(event.target)) {
+      if (notifRef.current && !notifRef.current.contains(e.target)) {
         setIsNotifOpen(false);
       }
-    }
+    };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   useEffect(() => {
     if (!user?.id || !isNotifOpen) return;
-
     const fetchNotifications = async () => {
       try {
         setLoadingNotif(true);
@@ -56,7 +55,6 @@ const Navbar = () => {
         setLoadingNotif(false);
       }
     };
-
     fetchNotifications();
   }, [user, isNotifOpen]);
 
@@ -71,12 +69,12 @@ const Navbar = () => {
     }
   };
 
-  const handleNotificationClick = (n) => {
-    if (n.link) {
-      navigate(n.link);
+  const handleNotificationClick = (notification) => {
+    if (notification.link) {
+      navigate(notification.link);
     }
-    if (!n.read) {
-      markAsRead(n._id);
+    if (!notification.read) {
+      markAsRead(notification._id);
     }
     setIsNotifOpen(false);
   };
@@ -90,12 +88,11 @@ const Navbar = () => {
   const unreadCount = notifications.filter((n) => !n.read).length;
 
   const avatarPath = user?.avatar || user?.profile?.avatar || "";
-const avatarUrl = avatarPath
-  ? avatarPath.startsWith("http") 
-    ? avatarPath 
-    : `${BASE_URL}/${avatarPath.replace(/\\/g, "/")}`
-  : "/assets/default-avatar.png"; // Make sure this file exists in public/assets/
-
+  const avatarUrl = avatarPath
+    ? avatarPath.startsWith("http")
+      ? avatarPath
+      : `${BASE_URL}/${avatarPath.replace(/\\/g, "/")}`
+    : "/assets/default-avatar.png";
 
   const getIconByType = (type) => {
     switch (type) {
@@ -119,17 +116,12 @@ const avatarUrl = avatarPath
           <img src={logo} alt="Logo" className="w-12 h-12 hover:scale-110 transition-transform" />
         </Link>
 
-        {/* Hamburger for mobile */}
         <div className="md:hidden">
-          <button
-            onClick={() => setIsOpen(!isOpen)}
-            className="text-white focus:outline-none"
-          >
+          <button onClick={() => setIsOpen(!isOpen)} className="text-white">
             {isOpen ? <HiX size={28} /> : <HiMenu size={28} />}
           </button>
         </div>
 
-        {/* Desktop nav */}
         <ul className="hidden md:flex gap-12 text-lg font-medium select-none">
           <li><Link to="/" className="hover:text-green-500">Home</Link></li>
           <li><Link to="/postjob" className="hover:text-green-500">Post Job</Link></li>
@@ -139,11 +131,9 @@ const avatarUrl = avatarPath
           {isLoggedIn && <li><Link to="/mytask" className="hover:text-green-500">My Task</Link></li>}
         </ul>
 
-        {/* Right: Notifications + Avatar */}
         <div className="hidden md:flex items-center gap-5 relative">
           {isLoggedIn ? (
             <>
-              {/* Notification bell */}
               <div ref={notifRef}>
                 <button onClick={() => setIsNotifOpen(!isNotifOpen)}>
                   <FiBell size={24} className="hover:text-green-500 relative" />
@@ -188,7 +178,6 @@ const avatarUrl = avatarPath
                 )}
               </div>
 
-              {/* Avatar */}
               <div
                 ref={avatarRef}
                 onClick={() => {
@@ -200,7 +189,6 @@ const avatarUrl = avatarPath
                 <img src={avatarUrl} alt="avatar" className="w-full h-full object-cover" />
               </div>
 
-              {/* Dropdown menu */}
               {isDropdownOpen && (
                 <div
                   ref={dropdownRef}
@@ -209,86 +197,27 @@ const avatarUrl = avatarPath
                   {!showSettingsDropdown ? (
                     <ul className="space-y-3 font-medium">
                       <li>
-                        <Link
-                          to="/dashboard"
-                          className="block hover:text-green-600"
-                          onClick={() => setIsDropdownOpen(false)}
-                        >
-                          My Tasker Dashboard
-                        </Link>
+                        <Link to="/dashboard" onClick={() => setIsDropdownOpen(false)} className="block hover:text-green-600">My Tasker Dashboard</Link>
                       </li>
-                      <li
-                        onClick={() => setShowSettingsDropdown(true)}
-                        className="flex justify-between items-center cursor-pointer hover:text-green-600"
-                      >
+                      <li onClick={() => setShowSettingsDropdown(true)} className="flex justify-between items-center cursor-pointer hover:text-green-600">
                         Settings <span>{">"}</span>
                       </li>
                       <li className="hover:text-green-600 cursor-pointer">Help Topics</li>
                       <li>
-                        <button
-                          onClick={handleLogout}
-                          className="w-full text-left text-red-600 hover:text-red-700 font-semibold"
-                        >
+                        <button onClick={handleLogout} className="w-full text-left text-red-600 hover:text-red-700 font-semibold">
                           Log Out
                         </button>
                       </li>
                     </ul>
                   ) : (
                     <ul className="space-y-3 font-medium">
-                      <li
-                        onClick={() => setShowSettingsDropdown(false)}
-                        className="flex items-center gap-2 text-gray-600 cursor-pointer hover:text-green-600"
-                      >
+                      <li onClick={() => setShowSettingsDropdown(false)} className="flex items-center gap-2 text-gray-600 cursor-pointer hover:text-green-600">
                         <span>{"<"}</span> Back
                       </li>
-                      <li>
-                        <Link
-                          to="/settings/profile"
-                          className="block hover:text-green-600"
-                          onClick={() => {
-                            setIsDropdownOpen(false);
-                            setShowSettingsDropdown(false);
-                          }}
-                        >
-                          Profile Info
-                        </Link>
-                      </li>
-                      <li>
-                        <Link
-                          to="/settings/phone"
-                          className="block hover:text-green-600"
-                          onClick={() => {
-                            setIsDropdownOpen(false);
-                            setShowSettingsDropdown(false);
-                          }}
-                        >
-                          Phone Number
-                        </Link>
-                      </li>
-                      <li>
-                        <Link
-                          to="/settings/email"
-                          className="block hover:text-green-600"
-                          onClick={() => {
-                            setIsDropdownOpen(false);
-                            setShowSettingsDropdown(false);
-                          }}
-                        >
-                          Email Update
-                        </Link>
-                      </li>
-                      <li>
-                        <Link
-                          to="/settings/password"
-                          className="block hover:text-green-600"
-                          onClick={() => {
-                            setIsDropdownOpen(false);
-                            setShowSettingsDropdown(false);
-                          }}
-                        >
-                          Change Password
-                        </Link>
-                      </li>
+                      <li><Link to="/settings/profile" onClick={() => setIsDropdownOpen(false)} className="block hover:text-green-600">Profile Info</Link></li>
+                      <li><Link to="/settings/phone" onClick={() => setIsDropdownOpen(false)} className="block hover:text-green-600">Phone Number</Link></li>
+                      <li><Link to="/settings/email" onClick={() => setIsDropdownOpen(false)} className="block hover:text-green-600">Email Update</Link></li>
+                      <li><Link to="/settings/password" onClick={() => setIsDropdownOpen(false)} className="block hover:text-green-600">Change Password</Link></li>
                     </ul>
                   )}
                 </div>
@@ -297,21 +226,16 @@ const avatarUrl = avatarPath
           ) : (
             <>
               <Link to="/auth">
-                <button className="border border-white px-5 py-2 rounded-full hover:bg-white hover:text-black">
-                  Login
-                </button>
+                <button className="border border-white px-5 py-2 rounded-full hover:bg-white hover:text-black">Login</button>
               </Link>
               <Link to="/auth">
-                <button className="bg-green-600 px-5 py-2 rounded-full hover:bg-green-700 ml-3">
-                  Register
-                </button>
+                <button className="bg-green-600 px-5 py-2 rounded-full hover:bg-green-700 ml-3">Register</button>
               </Link>
             </>
           )}
         </div>
       </div>
 
-      {/* Mobile menu */}
       {isOpen && (
         <div className="md:hidden mt-4 space-y-5 text-center bg-black/90 backdrop-blur-sm rounded-lg py-6 px-4 shadow-lg">
           <ul className="space-y-4 text-lg font-medium">
@@ -320,9 +244,7 @@ const avatarUrl = avatarPath
             <li><Link to="/jobs" onClick={() => setIsOpen(false)}>Jobs</Link></li>
             <li><Link to="/contact" onClick={() => setIsOpen(false)}>Contact</Link></li>
             <li><Link to="/about" onClick={() => setIsOpen(false)}>About</Link></li>
-            {isLoggedIn && (
-              <li><Link to="/mytask" onClick={() => setIsOpen(false)}>My Task</Link></li>
-            )}
+            {isLoggedIn && <li><Link to="/mytask" onClick={() => setIsOpen(false)}>My Task</Link></li>}
           </ul>
         </div>
       )}

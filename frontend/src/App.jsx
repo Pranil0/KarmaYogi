@@ -20,6 +20,8 @@ import SettingsPage from "./pages/SettingsPage"; // This should use <Outlet />
 import ProfileUpdate from "./components/AccountSettings/ProfileUpdate";
 import EmailUpdate from "./components/AccountSettings/EmailUpdate";
 import PasswordChange from "./components/AccountSettings/PasswordChange";
+import TaskerDashboard from "./pages/TaskerDashboard";
+import MyOfferDetail from "./components/MyOfferDetail";
 
 function App() {
   return (
@@ -37,13 +39,18 @@ function App() {
           <Route path="/tasks/:id" element={<TaskDetail />} />
           <Route path="/edit-task/:id" element={<EditTask />} />
           <Route path="/verify-otp" element={<OTPVerification />} />
+           <Route path="/dashboard" element={<TaskerDashboard/>} />
+           <Route path="/my-offers/:id" element={<MyOfferDetail/>} />
 
+ 
           {/* ✅ Nested settings routes */}
           <Route path="/settings" element={<SettingsPage />}>
             <Route index element={<Navigate to="profile" replace />} />
             <Route path="profile" element={<ProfileUpdate />} />
             <Route path="email" element={<EmailUpdate />} />
             <Route path="password" element={<PasswordChange />} />
+           
+
           </Route>
         </Routes>
       </div>

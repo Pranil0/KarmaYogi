@@ -41,7 +41,7 @@ exports.markAsRead = async (req, res) => {
   }
 };
 
-// ✅ Triggered: Tasker makes an offer → Notify Poster
+// ✅ Tasker makes an offer → Notify poster
 exports.notifyNewOffer = async (offer) => {
   const task = await Task.findById(offer.task).populate('createdBy');
   if (!task) return;
@@ -51,11 +51,11 @@ exports.notifyNewOffer = async (offer) => {
     user: task.createdBy._id,
     message,
     type: 'new-offer',
-    link: `/task/${task._id}`,
+    link: `/tasks/${task._id}`, // Poster is sent to the task detail
   });
 };
 
-// ✅ Triggered: Poster accepts an offer → Notify Tasker
+// ✅ Poster accepts an offer → Notify tasker
 exports.notifyOfferAccepted = async (offer) => {
   const task = await Task.findById(offer.task);
   if (!task) return;
@@ -65,28 +65,28 @@ exports.notifyOfferAccepted = async (offer) => {
     user: offer.user,
     message,
     type: 'offer-accepted',
-    link: `/task/${task._id}`,
+    link: `/my-offers/${offer._id}`, // Tasker is sent to their offer detail
   });
 };
 
-// ✅ Triggered: Task edited → Notify all offerers
+// ✅ Poster edits a task → Notify all offerers
 exports.notifyTaskEdited = async (taskId) => {
-  const offers = await Offer.find({ task: taskId }).populate('user');
   const task = await Task.findById(taskId);
   if (!task) return;
 
+  const offers = await Offer.find({ task: taskId });
+
   for (const offer of offers) {
     await Notification.create({
-      user: offer.user._id,
+      user: offer.user,
       message: `Task "${task.title}" has been updated by the poster.`,
       type: 'task-edited',
-      link: `/task/${task._id}`,
+      link: `/my-offers/${offer._id}`, // Send each tasker to their own offer detail
     });
   }
 };
 
-
-
+// ✅ Poster cancels a task → Notify all offerers
 exports.notifyTaskCanceled = async (taskId) => {
   try {
     const task = await Task.findById(taskId);
@@ -96,7 +96,8 @@ exports.notifyTaskCanceled = async (taskId) => {
     const acceptedOffer = await Offer.findOne({ task: taskId, status: 'accepted' });
 
     for (const offer of offers) {
-      const isAccepted = acceptedOffer && offer._id.toString() === acceptedOffer._id.toString();
+      const isAccepted =
+        acceptedOffer && offer._id.toString() === acceptedOffer._id.toString();
 
       const message = isAccepted
         ? `The task you accepted "${task.title}" was cancelled by the poster.`
@@ -106,11 +107,10 @@ exports.notifyTaskCanceled = async (taskId) => {
         user: offer.user,
         message,
         type: 'task-cancelled',
-        link: `/task/${task._id}`,
+        link: `/my-offers/${offer._id}`, // Send all taskers to their offer detail
       });
     }
   } catch (err) {
     console.error('Error notifying task cancellation:', err);
   }
 };
-

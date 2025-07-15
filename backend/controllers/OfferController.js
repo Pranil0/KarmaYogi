@@ -54,6 +54,20 @@ exports.getOffersForTask = async (req, res) => {
     res.status(500).json({ message: 'Error fetching offers for this task' });
   }
 };
+// ✅ Get all offers made by the logged-in user (tasker dashboard)
+exports.getMyOffers = async (req, res) => {
+  try {
+    const myOffers = await Offer.find({ user: req.user.id })
+      .populate('task', 'title location budget dueDate status')
+      .sort({ createdAt: -1 });
+
+    res.status(200).json(myOffers);
+  } catch (err) {
+    console.error("Error fetching your offers:", err);
+    res.status(500).json({ message: "Failed to fetch your offers." });
+  }
+};
+
 
 // ✅ Accept an offer
 exports.acceptOffer = async (req, res) => {
@@ -93,5 +107,27 @@ exports.acceptOffer = async (req, res) => {
   } catch (err) {
     console.error('Error accepting offer:', err);
     res.status(500).json({ message: 'Server error while accepting offer' });
+  }
+};
+// ✅ Get single offer by ID with task populated — for MyOfferDetail page
+exports.getOfferById = async (req, res) => {
+  try {
+    const offer = await Offer.findById(req.params.offerId)
+      .populate('task', 'title location budget dueDate status createdBy')
+      .populate('user', 'name avatar email');
+
+    if (!offer) {
+      return res.status(404).json({ message: 'Offer not found' });
+    }
+
+    // Authorization: only offer owner can view this offer
+    if (offer.user._id.toString() !== req.user.id) {
+      return res.status(403).json({ message: 'Not authorized to view this offer.' });
+    }
+
+    res.status(200).json(offer);
+  } catch (err) {
+    console.error('Error fetching offer:', err);
+    res.status(500).json({ message: 'Server error fetching offer' });
   }
 };
