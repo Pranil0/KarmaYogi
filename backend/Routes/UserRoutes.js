@@ -9,12 +9,14 @@ const {
   requestEmailChange,
   confirmEmailChange,
   changePassword,
-  getPublicProfile
+  getPublicProfile,
+   resetPassword // <-- This must match what's exported
 } = require('../controllers/UserController');
 
 const {
   verifyOTP,
-  resendOTP
+  resendOTP,
+  
 } = require('../controllers/EmailVerificationController');
 
 const auth = require('../middleware/auth');
@@ -48,6 +50,13 @@ router.post('/email/confirm', auth, confirmEmailChange);
 router.put('/password', auth, changePassword);
 // 🔥 Public profile route
 router.get('/:id/profile',  getPublicProfile);
+
+
+console.log("resetPassword typeof:", typeof resetPassword);
+
+router.post('/resetpassword',  resetPassword);
+
+
 
 
 

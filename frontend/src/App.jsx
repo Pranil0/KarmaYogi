@@ -14,6 +14,7 @@ import Footer from "./components/Footer";
 import TaskDetail from "./pages/TaskDetail";
 import EditTask from "./pages/EditTask";
 import OTPVerification from "./components/OTPVerification";
+import ResetPassword from "./pages/ResetPassword";
 
 // Settings Section
 import SettingsPage from "./pages/SettingsPage"; // This should use <Outlet />
@@ -23,6 +24,7 @@ import PasswordChange from "./components/AccountSettings/PasswordChange";
 import TaskerDashboard from "./pages/TaskerDashboard";
 import MyOfferDetail from "./components/MyOfferDetail";
 import PublicProfile from "./pages/PublicProfile";
+import ForgotPassword from "./pages/ForgotPassword";
 
 function App() {
   return (
@@ -43,7 +45,9 @@ function App() {
            <Route path="/dashboard" element={<TaskerDashboard/>} />
            <Route path="/my-offers/:id" element={<MyOfferDetail/>} />
            <Route path="/users/:id/profile" element={<PublicProfile />} />
+<Route path="/resetpassword" element={<ResetPassword />} />
 
+<Route path="/forgot-password" element={<ForgotPassword/>} />
 
 
  

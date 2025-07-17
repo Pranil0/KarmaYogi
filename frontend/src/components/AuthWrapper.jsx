@@ -380,6 +380,12 @@ const AuthForm = () => {
                         <p className="text-white text-xs">{errors.password}</p>
                       )}
                     </div>
+<p
+  onClick={() => navigate("/forgot-password")}
+  className="text-sm mt-2 text-white underline cursor-pointer hover:text-gray-300 text-right"
+>
+  Forgot Password?
+</p>
 
                     <button
                       type="submit"

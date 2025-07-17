@@ -6,6 +6,8 @@ import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 const OTPVerification = () => {
+  const context = new URLSearchParams(useLocation().search).get("context");
+
   const [otpArray, setOtpArray] = useState(["", "", "", "", "", ""]);
   const [error, setError] = useState("");
   const [resendMessage, setResendMessage] = useState("");
@@ -65,14 +67,19 @@ const OTPVerification = () => {
     const otp = customOtp || otpArray.join("");
 
     try {
-      const res = await axios.post("/api/users/verify-otp", { email, otp });
-      toast.success(res.data.message || "Email verified successfully!");
-      setTimeout(() => navigate("/auth"), 1500);
-    } catch (err) {
-      setError(err.response?.data?.message || "Verification failed.");
-    } finally {
-      setLoading(false);
-    }
+  const res = await axios.post("/api/users/verify-otp", { email, otp });
+
+  if (context === "reset") {
+    toast.success("OTP verified. You can now reset your password.");
+    setTimeout(() => navigate(`/resetpassword?email=${email}`), 1500);
+  } else {
+    toast.success("Email verified successfully!");
+    setTimeout(() => navigate("/auth"), 1500);
+  }
+} catch (err) {
+  setError(err.response?.data?.message || "Verification failed.");
+}
+
   };
 
   const handleResendOTP = async () => {
@@ -101,7 +108,10 @@ const OTPVerification = () => {
             <FaEnvelope className="text-green-600 text-2xl" />
           </div>
         </div>
-        <h2 className="text-xl font-semibold text-gray-800">Check your email</h2>
+        <h2 className="text-xl font-semibold text-gray-800">
+  {context === "reset" ? "Reset Password Verification" : "Email Verification"}
+</h2>
+
         <p className="text-sm text-gray-600 mt-2 mb-6">
           Enter the verification code sent to<br />
           <span className="font-medium text-black">{email}</span>

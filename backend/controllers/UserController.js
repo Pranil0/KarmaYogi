@@ -246,3 +246,54 @@ exports.getPublicProfile = async (req, res) => {
     res.status(500).json({ message: "Error fetching public profile" });
   }
 };
+
+// Reset Password using email (after OTP verified)
+exports.resetPassword = async (req, res) => {
+  try {
+    const { email, newPassword } = req.body;
+
+    if (!email || !newPassword) {
+      return res.status(400).json({ message: 'Email and new password are required.' });
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: 'User not found.' });
+    }
+
+    // Optionally, check if user is verified
+    if (!user.isVerified) {
+      return res.status(403).json({ message: 'Please verify your email before resetting password.' });
+    }
+
+    user.password = await bcrypt.hash(newPassword, 10);
+    await user.save();
+
+    res.json({ message: 'Password has been reset successfully.' });
+  } catch (err) {
+    console.error('Reset Password Error:', err);
+    res.status(500).json({ message: 'Error resetting password', error: err.message });
+  }
+};
+// In EmailVerificationController.js (or a dedicated PasswordResetController.js)
+exports.sendResetOTP = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const otpCode = generateOTP();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+    user.resetPasswordOTP = { code: otpCode, expiresAt };
+    await user.save();
+
+    await sendOTPEmail(email, otpCode);
+
+    res.status(200).json({ message: "Reset OTP sent to your email" });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+

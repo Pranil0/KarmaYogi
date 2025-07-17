@@ -32,21 +32,26 @@ exports.verifyOTP = async (req, res) => {
 // Resend OTP
 exports.resendOTP = async (req, res) => {
   try {
-    const { email } = req.body;
+    const { email, purpose } = req.body; // purpose: "verify" or "reset"
     const user = await User.findOne({ email });
 
     if (!user) return res.status(404).json({ message: "User not found" });
-    if (user.isVerified) return res.status(400).json({ message: "Email already verified" });
+
+    if (purpose === "verify") {
+      if (user.isVerified) return res.status(400).json({ message: "Email already verified" });
+    }
 
     const otpCode = generateOTP();
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
-    user.otp = { code: otpCode, expiresAt };
+    user.otp = { code: otpCode, expiresAt, purpose }; // Store purpose for validation
     await user.save();
 
-    await sendOTPEmail(email, otpCode);
+    // Send email with appropriate message
+    const subject = purpose === "reset" ? "Reset Your Password" : "Verify Your Email";
+    await sendOTPEmail(email, otpCode, subject);
 
-    res.status(200).json({ message: "OTP resent to your email" });
+    res.status(200).json({ message: `OTP sent for ${purpose}` });
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
   }
