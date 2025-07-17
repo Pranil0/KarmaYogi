@@ -8,7 +8,8 @@ const {
   updateProfile,
   requestEmailChange,
   confirmEmailChange,
-  changePassword
+  changePassword,
+  getPublicProfile
 } = require('../controllers/UserController');
 
 const {
@@ -45,5 +46,9 @@ router.post('/email/confirm', auth, confirmEmailChange);
 
 // Change password
 router.put('/password', auth, changePassword);
+// 🔥 Public profile route
+router.get('/:id/profile',  getPublicProfile);
+
+
 
 module.exports = router;

@@ -9,10 +9,11 @@ import {
 } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from "../utils/axiosInstance";
+import axiosPublic from "axios";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../contexts/AuthContext";
 import { ToastContainer, toast } from "react-toastify";
-import 'react-toastify/dist/ReactToastify.css';
+import "react-toastify/dist/ReactToastify.css";
 
 const AuthForm = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -22,10 +23,13 @@ const AuthForm = () => {
     email: "",
     password: "",
     photo: null,
+    latitude: null,
+    longitude: null,
   });
   const [errors, setErrors] = useState({});
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [suggestions, setSuggestions] = useState([]);
 
   const navigate = useNavigate();
   const { login, isLoggedIn } = useContext(AuthContext);
@@ -45,8 +49,11 @@ const AuthForm = () => {
       email: "",
       password: "",
       photo: null,
+      latitude: null,
+      longitude: null,
     });
     setErrors({});
+    setSuggestions([]);
   };
 
   const validateForm = () => {
@@ -62,6 +69,8 @@ const AuthForm = () => {
       if (!formData.fullName) newErrors.fullName = "Full name is required";
       if (!formData.location) newErrors.location = "Location is required";
       if (!formData.photo) newErrors.photo = "Please upload your photo";
+      if (!formData.latitude || !formData.longitude)
+        newErrors.location = "Please select a valid location from suggestions";
     }
 
     setErrors(newErrors);
@@ -69,47 +78,47 @@ const AuthForm = () => {
   };
 
   const handleSubmit = async (e) => {
-  e.preventDefault();
-  if (!validateForm()) return;
+    e.preventDefault();
+    if (!validateForm()) return;
 
-  setLoading(true);
-  try {
-    if (isLogin) {
-      const res = await axios.post("/api/users/login", {
-        email: formData.email,
-        password: formData.password,
-      });
-      login(res.data.token, res.data.user);
-      toast.success("Logged in successfully!");
-      navigate("/Home");
-    } else {
-      // signup flow (unchanged)
-      const data = new FormData();
-      data.append("name", formData.fullName);
-      data.append("location", formData.location);
-      data.append("email", formData.email);
-      data.append("password", formData.password);
-      data.append("avatar", formData.photo);
+    setLoading(true);
+    try {
+      if (isLogin) {
+        const res = await axios.post("/api/users/login", {
+          email: formData.email,
+          password: formData.password,
+        });
+        login(res.data.token, res.data.user);
+        toast.success("Logged in successfully!");
+        navigate("/Home");
+      } else {
+        const data = new FormData();
+        data.append("name", formData.fullName);
+        data.append("location", formData.location);
+        data.append("email", formData.email);
+        data.append("password", formData.password);
+        data.append("avatar", formData.photo);
+        data.append("latitude", formData.latitude);
+        data.append("longitude", formData.longitude);
 
-      await axios.post("/api/users/register", data, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+        await axios.post("/api/users/register", data, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
 
-      toast.success("OTP sent! Please verify your email.");
-      navigate(`/verify-otp?email=${formData.email}`);
+        toast.success("OTP sent! Please verify your email.");
+        navigate(`/verify-otp?email=${formData.email}`);
+      }
+    } catch (err) {
+      const message = err.response?.data?.message || "Something went wrong";
+      toast.error(message);
+
+      if (message === "Please verify your email first") {
+        navigate(`/verify-otp?email=${formData.email}`);
+      }
+    } finally {
+      setLoading(false);
     }
-  } catch (err) {
-    const message = err.response?.data?.message || "Something went wrong";
-    toast.error(message);
-
-    if (message === "Please verify your email first") {
-      navigate(`/verify-otp?email=${formData.email}`);
-    }
-  } finally {
-    setLoading(false);
-  }
-};
-
+  };
 
   const handleFileChange = (e) => {
     setFormData((prev) => ({ ...prev, photo: e.target.files[0] }));
@@ -118,6 +127,41 @@ const AuthForm = () => {
   const handleToggleLogin = () => {
     setIsLogin((prev) => !prev);
     resetForm();
+  };
+
+  // Location autocomplete (restricted to Nepal)
+  const handleLocationChange = (e) => {
+    const value = e.target.value;
+    setFormData({ ...formData, location: value, latitude: null, longitude: null });
+
+    if (value.length > 2) {
+      fetchSuggestions(value);
+    } else {
+      setSuggestions([]);
+    }
+  };
+
+  const fetchSuggestions = async (query) => {
+    try {
+      const res = await axiosPublic.get(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+          query
+        )}&countrycodes=np&limit=5`
+      );
+      setSuggestions(res.data);
+    } catch (err) {
+      console.error("Failed to fetch location suggestions:", err);
+    }
+  };
+
+  const handleSuggestionClick = (place) => {
+    setFormData({
+      ...formData,
+      location: place.display_name,
+      latitude: parseFloat(place.lat),
+      longitude: parseFloat(place.lon),
+    });
+    setSuggestions([]);
   };
 
   return (
@@ -135,7 +179,7 @@ const AuthForm = () => {
           {isDarkMode ? "🌙" : "🌞"}
         </div>
 
-        {/* Left side panel */}
+        {/* Left Panel */}
         <div
           className={`w-1/2 h-full p-6 transition-all duration-700 flex flex-col justify-center items-center ${
             !isLogin ? "bg-[#159063] text-white" : "bg-white text-gray-700"
@@ -153,7 +197,6 @@ const AuthForm = () => {
               {!isLogin ? (
                 <>
                   <h2 className="text-3xl font-bold mb-4">Create Account</h2>
-
                   <form
                     className="w-full max-w-[300px]"
                     onSubmit={handleSubmit}
@@ -182,12 +225,24 @@ const AuthForm = () => {
                         placeholder="Location"
                         className="w-full p-2 pl-10 rounded bg-[#118b5e] text-white placeholder-gray-300"
                         value={formData.location}
-                        onChange={(e) =>
-                          setFormData({ ...formData, location: e.target.value })
-                        }
+                        onChange={handleLocationChange}
+                        autoComplete="off"
                       />
                       {errors.location && (
                         <p className="text-white text-xs">{errors.location}</p>
+                      )}
+                      {suggestions.length > 0 && (
+                        <ul className="absolute z-50 bg-white text-black rounded shadow-md mt-1 w-full max-h-40 overflow-y-auto">
+                          {suggestions.map((place, idx) => (
+                            <li
+                              key={idx}
+                              onClick={() => handleSuggestionClick(place)}
+                              className="px-4 py-2 cursor-pointer hover:bg-gray-200 text-sm"
+                            >
+                              {place.display_name}
+                            </li>
+                          ))}
+                        </ul>
                       )}
                     </div>
 
@@ -224,7 +279,9 @@ const AuthForm = () => {
                     </div>
 
                     <div className="mb-3">
-                      <label className="text-white block mb-1">Upload Your Photo</label>
+                      <label className="text-white block mb-1">
+                        Upload Your Photo
+                      </label>
                       <input
                         type="file"
                         accept="image/*"
@@ -238,9 +295,10 @@ const AuthForm = () => {
 
                     <button
                       type="submit"
+                      disabled={loading}
                       className="w-full py-2 bg-white text-[#118b5e] font-bold rounded hover:bg-green-200 transform hover:scale-105 transition-all duration-300"
                     >
-                      Sign up
+                      {loading ? (isLogin ? "Logging in..." : "Signing up...") : isLogin ? "Log in" : "Sign up"}
                     </button>
                   </form>
                 </>
@@ -259,7 +317,7 @@ const AuthForm = () => {
           </AnimatePresence>
         </div>
 
-        {/* Right side panel */}
+        {/* Right Panel */}
         <div
           className={`w-1/2 h-full p-6 transition-all duration-700 flex flex-col justify-center items-center ${
             isLogin ? "bg-[#159063] text-white" : "bg-white text-gray-700"
@@ -325,9 +383,10 @@ const AuthForm = () => {
 
                     <button
                       type="submit"
+                      disabled={loading}
                       className="w-full py-2 bg-white text-[#118b5e] font-bold rounded hover:bg-green-200 transform hover:scale-105 transition-all duration-300"
                     >
-                      Log in
+                      {loading ? "Logging in..." : "Log in"}
                     </button>
                   </form>
                 </>

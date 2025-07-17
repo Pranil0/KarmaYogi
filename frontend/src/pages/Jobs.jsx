@@ -6,6 +6,10 @@ import { useLocation } from 'react-router-dom';
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
 import markerShadow from 'leaflet/dist/images/marker-shadow.png';
+import { Link } from 'react-router-dom';
+import QuestionsSection from '../components/QuestionsSection';
+import { Loader2 } from 'lucide-react';
+
 
 import {
   MapPin,
@@ -27,6 +31,23 @@ const icon = new L.Icon({
   shadowSize: [41, 41],
 });
 
+// Helper function: Calculate distance (km) between two lat/lng points using Haversine formula
+function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
+  const toRad = (value) => (value * Math.PI) / 180;
+  const R = 6371; // Earth radius in km
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) *
+      Math.cos(toRad(lat2)) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  const d = R * c; // Distance in km
+  return d;
+}
+
 const Jobs = () => {
   const location = useLocation();
   const selectedJobId = location.state?.selectedJobId || null;
@@ -35,7 +56,21 @@ const Jobs = () => {
   const [loading, setLoading] = useState(true);
   const [selectedJob, setSelectedJob] = useState(null);
   const [showOfferModal, setShowOfferModal] = useState(false);
-  const [expandedFields, setExpandedFields] = useState({});
+  
+
+   const [offers, setOffers] = useState([]);
+const [loadingOffers, setLoadingOffers] = useState(false);
+  const [activeTab, setActiveTab] = useState('offers'); // or 'questions'
+
+   
+  // Filters states
+  const [categoryFilter, setCategoryFilter] = useState('');
+  const [distanceFilter, setDistanceFilter] = useState(''); // e.g. "0-1", "1-5", "5+"
+  const [priceFilter, setPriceFilter] = useState('');
+  const [sortOption, setSortOption] = useState('');
+
+  // User location for distance filter
+  const [userLocation, setUserLocation] = useState(null);
 
   // Offer form states
   const [offerAmount, setOfferAmount] = useState('');
@@ -43,12 +78,46 @@ const Jobs = () => {
   const [offerLoading, setOfferLoading] = useState(false);
 
   useEffect(() => {
+    // Fallback fetch user location from DB
+    const fetchUserLocationFromDB = async () => {
+      try {
+        const res = await axiosInstance.get('/api/users/profile');
+setUserLocation({
+  lat: res.data.geoLocation.coordinates[1], // latitude
+  lng: res.data.geoLocation.coordinates[0], // longitude
+});
+
+      } catch (error) {
+        console.warn('Failed to fetch user location from DB:', error);
+      }
+    };
+
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserLocation({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          });
+        },
+        (error) => {
+          console.warn('Geolocation error:', error.message);
+          // On error or permission denied, fallback to DB location
+          fetchUserLocationFromDB();
+        }
+      );
+    } else {
+      // Browser does not support geolocation, fallback to DB location
+      fetchUserLocationFromDB();
+    }
+  }, []);
+
+  useEffect(() => {
     const fetchJobs = async () => {
       try {
         const res = await axiosInstance.get('/api/tasks');
-         console.log('Fetched jobs:', res.data); // 👈 helpful debug
-
         const filteredJobs = res.data.filter((job) => !job.isCancelled);
+
         const mappedJobs = filteredJobs.map((job) => ({
           ...job,
           lat: job.latitude,
@@ -73,9 +142,82 @@ const Jobs = () => {
     fetchJobs();
   }, [selectedJobId]);
 
-  const toggleField = (id) => {
-    setExpandedFields((prev) => ({ ...prev, [id]: !prev[id] }));
+
+  useEffect(() => {
+  const fetchOffers = async () => {
+    if (!selectedJob) return;
+    setLoadingOffers(true);
+    try {
+      const res = await axiosInstance.get(`/api/offers/task/${selectedJob._id}`);
+      setOffers(res.data);
+    } catch (error) {
+      console.error('Error fetching offers:', error.response?.data || error.message);
+      setOffers([]);
+    } finally {
+      setLoadingOffers(false);
+    }
   };
+
+  fetchOffers();
+}, [selectedJob]);
+
+
+  // Apply all filters & sorting
+  const getFilteredJobs = () => {
+    let filtered = [...jobs];
+
+    // Filter by category
+    if (categoryFilter && categoryFilter !== 'Category') {
+      filtered = filtered.filter(
+        (job) => job.category?.toLowerCase() === categoryFilter.toLowerCase()
+      );
+    }
+
+    // Filter by distance
+    if (distanceFilter && userLocation) {
+      filtered = filtered.filter((job) => {
+        if (job.lat == null || job.lng == null) return false;
+        const distanceKm = getDistanceFromLatLonInKm(
+          userLocation.lat,
+          userLocation.lng,
+          job.lat,
+          job.lng
+        );
+        if (distanceFilter === '0-1') return distanceKm <= 1;
+        if (distanceFilter === '1-5') return distanceKm > 1 && distanceKm <= 5;
+        if (distanceFilter === '5+') return distanceKm > 5;
+        return true;
+      });
+    }
+
+    // Filter by price
+    if (priceFilter) {
+      if (priceFilter === 'Below 500') {
+        filtered = filtered.filter((job) => job.budget < 500);
+      } else if (priceFilter === '500+') {
+        filtered = filtered.filter((job) => job.budget >= 500);
+      }
+    }
+
+    // Sorting
+    if (sortOption) {
+      if (sortOption === 'Recent') {
+        filtered = filtered.sort(
+          (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+        );
+      } else if (sortOption === 'Oldest') {
+        filtered = filtered.sort(
+          (a, b) => new Date(a.createdAt) - new Date(b.createdAt)
+        );
+      } else if (sortOption === 'Highest Price') {
+        filtered = filtered.sort((a, b) => b.budget - a.budget);
+      }
+    }
+
+    return filtered;
+  };
+
+  const filteredJobs = getFilteredJobs();
 
   const handleOfferSubmit = async () => {
     if (!offerAmount || Number(offerAmount) <= 0) {
@@ -112,10 +254,10 @@ const Jobs = () => {
   }
 
   const centerPosition =
-    jobs.length > 0
+    filteredJobs.length > 0
       ? [
-          jobs.reduce((sum, job) => sum + (job.lat || 0), 0) / jobs.length,
-          jobs.reduce((sum, job) => sum + (job.lng || 0), 0) / jobs.length,
+          filteredJobs.reduce((sum, job) => sum + (job.lat || 0), 0) / filteredJobs.length,
+          filteredJobs.reduce((sum, job) => sum + (job.lng || 0), 0) / filteredJobs.length,
         ]
       : [27.6749, 84.4325];
 
@@ -127,38 +269,62 @@ const Jobs = () => {
           type="text"
           placeholder="Search for a task"
           className="w-full p-2 mb-4 rounded text-white bg-gray-900"
+          disabled // Disable because not implemented
         />
-        <button className="w-full bg-green-700 text-white py-2 mb-4 rounded">
+        <button className="w-full bg-green-700 text-white py-2 mb-4 rounded" disabled>
           New Jobs
         </button>
 
         <div className="flex flex-wrap gap-2 mb-4 text-sm font-semibold">
-          <select className="bg-black border border-white px-3 py-1 rounded">
+          {/* Category Filter */}
+          <select
+            className="bg-black border border-white px-3 py-1 rounded"
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
+          >
             <option>Category</option>
             <option>Plumber</option>
             <option>Electrician</option>
             <option>Carpenter</option>
           </select>
-          <select className="bg-black border border-white px-3 py-1 rounded">
+
+          {/* Distance Filter */}
+          <select
+            className="bg-black border border-white px-3 py-1 rounded"
+            value={distanceFilter}
+            onChange={(e) => setDistanceFilter(e.target.value)}
+          >
             <option>Distance</option>
-            <option>0-1km</option>
-            <option>1-5km</option>
-            <option>5km+</option>
+            <option value="0-1">0-1km</option>
+            <option value="1-5">1-5km</option>
+            <option value="5+">5km+</option>
           </select>
-          <select className="bg-black border border-white px-3 py-1 rounded">
+
+          {/* Price Filter */}
+          <select
+            className="bg-black border border-white px-3 py-1 rounded"
+            value={priceFilter}
+            onChange={(e) => setPriceFilter(e.target.value)}
+          >
             <option>Price</option>
             <option>Below 500</option>
             <option>500+</option>
           </select>
-          <select className="bg-black border border-white px-3 py-1 rounded">
+
+          {/* Sort Filter */}
+          <select
+            className="bg-black border border-white px-3 py-1 rounded"
+            value={sortOption}
+            onChange={(e) => setSortOption(e.target.value)}
+          >
             <option>Sort</option>
-            <option>Recent</option>
-            <option>Oldest</option>
-            <option>Highest Price</option>
+            <option value="Recent">Recent</option>
+            <option value="Oldest">Oldest</option>
+            <option value="Highest Price">Highest Price</option>
           </select>
         </div>
 
-        {jobs.map((job) => (
+        {filteredJobs.map((job) => (
           <div
             key={job._id}
             className="bg-white text-black border rounded shadow-sm p-4 mb-4 cursor-pointer hover:shadow-lg"
@@ -202,7 +368,7 @@ const Jobs = () => {
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 attribution="&copy; OpenStreetMap contributors"
               />
-              {jobs.map(
+              {filteredJobs.map(
                 (job) =>
                   job.lat &&
                   job.lng && (
@@ -236,16 +402,26 @@ const Jobs = () => {
                   &lt; Return to map
                 </button>
 
-                <div className="flex items-center gap-3 text-sm text-gray-400 mb-2">
-                  <img
-                    src={selectedJob.createdBy?.profile?.avatar || '/avatar.png'}
-                    alt="User Avatar"
-                    className="w-8 h-8 rounded-full object-cover"
-                  />
-                  <span className="text-white font-semibold">
-                    {selectedJob.createdBy?.name || 'Unknown User'}
-                  </span>
-                </div>
+                
+<Link
+  to={`/users/${selectedJob.createdBy?._id}/profile`}
+  className="flex items-center gap-3 text-sm text-gray-400 mb-2 hover:underline"
+>
+  <img
+    src={
+      selectedJob.createdBy?.profile?.avatar
+        ? `http://localhost:5000/${selectedJob.createdBy.profile.avatar}`
+        : '/avatar.png'
+    }
+    alt="User Avatar"
+    className="w-8 h-8 rounded-full object-cover"
+  />
+  <span className="text-white font-semibold">
+    {selectedJob.createdBy?.name || 'Unknown User'}
+  </span>
+</Link>
+
+
 
                 <div className="flex items-center gap-2 mb-2 text-sm text-gray-300">
                   <MapPin className="w-4 h-4" />
@@ -305,6 +481,73 @@ const Jobs = () => {
                 </button>
               </div>
             </div>
+            <div className="flex gap-4 mt-10">
+  <button
+    className={`px-4 py-2 rounded ${activeTab === 'offers' ? 'bg-green-700 text-white' : 'bg-gray-700 text-gray-300'}`}
+    onClick={() => setActiveTab('offers')}
+  >
+    Offers
+  </button>
+  <button
+    className={`px-4 py-2 rounded ${activeTab === 'questions' ? 'bg-green-700 text-white' : 'bg-gray-700 text-gray-300'}`}
+    onClick={() => setActiveTab('questions')}
+  >
+    Questions
+  </button>
+</div>
+
+{activeTab === 'offers' ? (
+  <div className="mt-6">
+    <h3 className="text-white text-2xl font-bold mb-6">Offers</h3>
+
+    {loadingOffers ? (
+      <div className="flex justify-center items-center py-10">
+        <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+      </div>
+    ) : offers.length === 0 ? (
+      <p className="text-gray-400">No offers yet for this task.</p>
+    ) : (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {offers.map((offer) => (
+          <div
+            key={offer._id}
+            className="bg-[#1F1F1F] border border-gray-700 p-5 rounded-2xl shadow-md transition hover:shadow-lg"
+          >
+            <div className="flex items-center gap-4 mb-4">
+              <img
+                src={
+                  offer.user?.profile?.avatar
+                    ? `http://localhost:5000/${offer.user.profile.avatar}`
+                    : '/avatar.png'
+                }
+                alt="User Avatar"
+                className="w-12 h-12 rounded-full object-cover border border-gray-600"
+              />
+              <div>
+                <h4 className="font-semibold text-white text-lg">
+                  {offer.user?.name || 'Unknown User'}
+                </h4>
+                <p className="text-gray-400 text-sm">Offered Rs.{offer.offerAmount}</p>
+              </div>
+            </div>
+            <p className="text-gray-300 text-sm leading-relaxed">
+              {offer.message || 'No message provided.'}
+            </p>
+          </div>
+        ))}
+      </div>
+    )}
+  </div>
+) 
+ : (
+  <div className="mt-6">
+    <h3 className="text-white text-xl font-bold mb-4">Questions</h3>
+    <QuestionsSection selectedJob={selectedJob} />
+  </div>
+)}
+
+  
+
 
             {/* Offer Modal */}
             {showOfferModal && (
@@ -354,4 +597,4 @@ const Jobs = () => {
   );
 };
 
-export default Jobs;
+export default Jobs; 

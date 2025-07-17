@@ -22,6 +22,7 @@ import EmailUpdate from "./components/AccountSettings/EmailUpdate";
 import PasswordChange from "./components/AccountSettings/PasswordChange";
 import TaskerDashboard from "./pages/TaskerDashboard";
 import MyOfferDetail from "./components/MyOfferDetail";
+import PublicProfile from "./pages/PublicProfile";
 
 function App() {
   return (
@@ -41,6 +42,9 @@ function App() {
           <Route path="/verify-otp" element={<OTPVerification />} />
            <Route path="/dashboard" element={<TaskerDashboard/>} />
            <Route path="/my-offers/:id" element={<MyOfferDetail/>} />
+           <Route path="/users/:id/profile" element={<PublicProfile />} />
+
+
 
  
           {/* ✅ Nested settings routes */}

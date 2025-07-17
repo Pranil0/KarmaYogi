@@ -17,7 +17,6 @@ const userSchema = new mongoose.Schema({
   password: {
     type: String,
     required: [true, 'Password is required']
-    // Store hashed password
   },
   profile: {
     bio: { type: String, default: "" },
@@ -36,6 +35,17 @@ const userSchema = new mongoose.Schema({
     trim: true,
     default: ""
   },
+  geoLocation: {
+    type: {
+      type: String,
+      enum: ['Point'],
+      default: 'Point'
+    },
+    coordinates: {
+      type: [Number], // [longitude, latitude]
+      default: [0, 0]
+    }
+  },
   otp: {
     code: { type: String },
     expiresAt: { type: Date }
@@ -49,5 +59,8 @@ const userSchema = new mongoose.Schema({
     default: false
   }
 }, { timestamps: true });
+
+// Create a geospatial index on geoLocation
+userSchema.index({ geoLocation: "2dsphere" });
 
 module.exports = mongoose.model('User', userSchema);

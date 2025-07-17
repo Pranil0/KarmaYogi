@@ -20,12 +20,15 @@ app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Import Routes
+const questionRoutes = require('./Routes/QuestionRoutes');
 const userRoutes = require('./Routes/UserRoutes');
 const taskRoutes = require('./Routes/TaskRoutes');
 const offerRoutes = require('./Routes/OfferRoutes');
 const reviewRoutes = require('./Routes/ReviewRoutes');
 const adminRoutes = require('./Routes/AdminRoutes');
-const notificationRoutes = require('./Routes/NotificationRoutes'); // ✅ correct path and file
+const notificationRoutes = require('./Routes/NotificationRoutes');
+
+ // ✅ correct path and file
 // Mount Routes
 app.use('/api/users', userRoutes);
 app.use('/api/tasks', taskRoutes);
@@ -33,6 +36,7 @@ app.use('/api/offers', offerRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/questions', questionRoutes);
 
 // Health Check
 app.get('/', (req, res) => {
