@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useContext } from 'react';
 import axiosInstance from '../utils/axiosInstance';
 import { AuthContext } from "../contexts/AuthContext";
-import { Loader2 } from 'lucide-react';
-
+import { Link } from 'react-router-dom';
+import { formatDistanceToNow } from 'date-fns';
 
 const QuestionsSection = ({ selectedJob }) => {
   const { user } = useContext(AuthContext);
@@ -94,28 +94,39 @@ const QuestionsSection = ({ selectedJob }) => {
         <div className="space-y-5">
           {questions.map((q) => (
             <div key={q._id} className="bg-white border border-gray-200 rounded-xl p-4">
-              <div className="flex items-center gap-3 mb-2">
+              <Link
+                to={`/users/${q.createdBy?._id}/profile`}
+                className="flex items-center gap-3 mb-2 hover:underline"
+              >
                 <img
-  src={
-    q.createdBy?.profile?.avatar
-      ? `http://localhost:5000/${q.createdBy.profile.avatar}`
-      : '/avatar.png'
-  }
-  alt="User Avatar"
-  className="w-8 h-8 rounded-full object-cover"
-/>
+                  src={
+                    q.createdBy?.profile?.avatar
+                      ? `http://localhost:5000/${q.createdBy.profile.avatar}`
+                      : '/avatar.png'
+                  }
+                  alt="User Avatar"
+                  className="w-8 h-8 rounded-full object-cover"
+                />
+                <p className="text-sm font-medium text-gray-800">{q.createdBy?.name || 'Unknown User'}</p>
+              </Link>
 
-                <p className="text-sm font-medium text-gray-800">{q.createdBy?.name}</p>
-              </div>
               <p className="text-sm text-gray-900">{q.text}</p>
-              <p className="text-xs text-gray-500 mt-1">about 1 hour ago</p>
+              <p className="text-xs text-gray-500 mt-1">
+                {formatDistanceToNow(new Date(q.createdAt), { addSuffix: true })}
+              </p>
 
               {q.answers?.length > 0 && (
-                <div className="mt-3 ml-4 border-l-2 border-gray-200 pl-4">
+                <div className="mt-3 ml-4 border-l-2 border-gray-200 pl-4 space-y-3">
                   {q.answers.map((a, i) => (
-                    <div key={i} className="mt-2">
+                    <div key={i} className="">
                       <p className="text-sm text-gray-800">{a.text}</p>
-                      <p className="text-xs text-gray-500">Replied by {a.createdBy?.name}</p>
+                      <Link
+                        to={`/users/${a.createdBy?._id}/profile`}
+                        className="text-xs text-gray-500 hover:underline"
+                      >
+                        Replied by {a.createdBy?.name || 'Unknown User'} ·{' '}
+                        {formatDistanceToNow(new Date(a.createdAt), { addSuffix: true })}
+                      </Link>
                     </div>
                   ))}
                 </div>

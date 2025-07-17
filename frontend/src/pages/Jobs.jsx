@@ -8,7 +8,6 @@ import markerIcon from 'leaflet/dist/images/marker-icon.png';
 import markerShadow from 'leaflet/dist/images/marker-shadow.png';
 import { Link } from 'react-router-dom';
 import QuestionsSection from '../components/QuestionsSection';
-import { Loader2 } from 'lucide-react';
 
 
 import {
@@ -125,6 +124,22 @@ setUserLocation({
         }));
 
         setJobs(mappedJobs);
+
+        // Fetch all offers for offer count
+      const offersRes = await axiosInstance.get('/api/offers');
+      const offerCounts = {};
+      offersRes.data.forEach((offer) => {
+        const jobId = offer.task;
+        offerCounts[jobId] = (offerCounts[jobId] || 0) + 1;
+      });
+
+      // Attach offerCount to each job
+      const jobsWithOffers = mappedJobs.map((job) => ({
+        ...job,
+        offerCount: offerCounts[job._id] || 0,
+      }));
+
+      setJobs(jobsWithOffers);
 
         if (selectedJobId) {
           const jobToSelect = mappedJobs.find((job) => job._id === selectedJobId);
@@ -502,7 +517,7 @@ setUserLocation({
 
     {loadingOffers ? (
       <div className="flex justify-center items-center py-10">
-        <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+        <div className="h-6 w-6 animate-spin text-gray-400" />
       </div>
     ) : offers.length === 0 ? (
       <p className="text-gray-400">No offers yet for this task.</p>
@@ -513,23 +528,33 @@ setUserLocation({
             key={offer._id}
             className="bg-[#1F1F1F] border border-gray-700 p-5 rounded-2xl shadow-md transition hover:shadow-lg"
           >
-            <div className="flex items-center gap-4 mb-4">
-              <img
-                src={
-                  offer.user?.profile?.avatar
-                    ? `http://localhost:5000/${offer.user.profile.avatar}`
-                    : '/avatar.png'
-                }
-                alt="User Avatar"
-                className="w-12 h-12 rounded-full object-cover border border-gray-600"
-              />
-              <div>
-                <h4 className="font-semibold text-white text-lg">
-                  {offer.user?.name || 'Unknown User'}
-                </h4>
-                <p className="text-gray-400 text-sm">Offered Rs.{offer.offerAmount}</p>
-              </div>
-            </div>
+   <div className="flex items-center gap-4 mb-4">
+  <Link
+    to={`/users/${offer.user?._id}/profile`}
+    className="flex items-center gap-3 hover:underline"
+  >
+    <img
+      src={
+        offer.user?.profile?.avatar
+          ? `http://localhost:5000/${offer.user.profile.avatar}`
+          : '/avatar.png'
+      }
+      alt="User Avatar"
+      className="w-12 h-12 rounded-full object-cover border border-gray-600"
+    />
+    <h4 className="font-semibold text-white text-lg">
+      {offer.user?.name || 'Unknown User'}
+    </h4>
+  </Link>
+
+  {/* This part is outside the Link and won't be clickable */}
+</div>
+<p className="text-gray-400 text-sm -mt-2 mb-2 ml-16">
+  Offered Rs.{offer.offerAmount}
+</p>
+
+
+
             <p className="text-gray-300 text-sm leading-relaxed">
               {offer.message || 'No message provided.'}
             </p>
@@ -597,4 +622,4 @@ setUserLocation({
   );
 };
 
-export default Jobs; 
+export default Jobs;  

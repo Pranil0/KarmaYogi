@@ -3,6 +3,7 @@ const router = express.Router();
 const auth = require('../middleware/auth');
 const {
   createOffer,
+  
   getOffersForTask,
   getMyOffers,
   acceptOffer,
@@ -12,6 +13,9 @@ const {
 
 // ✅ Create an offer
 router.post('/', auth, createOffer);
+
+
+
 
 router.get('/my-offers', auth, getMyOffers); 
 
